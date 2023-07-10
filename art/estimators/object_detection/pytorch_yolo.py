@@ -59,19 +59,24 @@ def translate_predictions_xcycwh_to_x1y1x2y2(
                 torch.vstack(
                     [
                         torch.maximum(
-                            (y_pred_xcycwh[i, :, 0] - y_pred_xcycwh[i, :, 2] / 2),
+                            (y_pred_xcycwh[i, :, 0] -
+                             y_pred_xcycwh[i, :, 2] / 2),
                             torch.tensor(0).to(y_pred_xcycwh.device),
                         ),
                         torch.maximum(
-                            (y_pred_xcycwh[i, :, 1] - y_pred_xcycwh[i, :, 3] / 2),
+                            (y_pred_xcycwh[i, :, 1] -
+                             y_pred_xcycwh[i, :, 3] / 2),
                             torch.tensor(0).to(y_pred_xcycwh.device),
                         ),
                         torch.minimum(
-                            (y_pred_xcycwh[i, :, 0] + y_pred_xcycwh[i, :, 2] / 2),
-                            torch.tensor(input_height).to(y_pred_xcycwh.device),
+                            (y_pred_xcycwh[i, :, 0] +
+                             y_pred_xcycwh[i, :, 2] / 2),
+                            torch.tensor(input_height).to(
+                                y_pred_xcycwh.device),
                         ),
                         torch.minimum(
-                            (y_pred_xcycwh[i, :, 1] + y_pred_xcycwh[i, :, 3] / 2),
+                            (y_pred_xcycwh[i, :, 1] +
+                             y_pred_xcycwh[i, :, 3] / 2),
                             torch.tensor(input_width).to(y_pred_xcycwh.device),
                         ),
                     ]
@@ -120,7 +125,8 @@ class PyTorchYolo(ObjectDetectorMixin, PyTorchEstimator):
     | Paper link: https://arxiv.org/abs/1804.02767
     """
 
-    estimator_params = PyTorchEstimator.estimator_params + ["input_shape", "optimizer", "attack_losses"]
+    estimator_params = PyTorchEstimator.estimator_params + \
+        ["input_shape", "optimizer", "attack_losses"]
 
     def __init__(
         self,
@@ -129,14 +135,15 @@ class PyTorchYolo(ObjectDetectorMixin, PyTorchEstimator):
         optimizer: Optional["torch.optim.Optimizer"] = None,
         clip_values: Optional["CLIP_VALUES_TYPE"] = None,
         channels_first: Optional[bool] = True,
-        preprocessing_defences: Union["Preprocessor", List["Preprocessor"], None] = None,
-        postprocessing_defences: Union["Postprocessor", List["Postprocessor"], None] = None,
+        preprocessing_defences: Union["Preprocessor",
+                                      List["Preprocessor"], None] = None,
+        postprocessing_defences: Union["Postprocessor",
+                                       List["Postprocessor"], None] = None,
         preprocessing: "PREPROCESSING_TYPE" = None,
         attack_losses: Tuple[str, ...] = (
-            "loss_classifier",
             "loss_box_reg",
             "loss_objectness",
-            "loss_rpn_box_reg",
+            "loss_classification",
         ),
         device_type: str = "gpu",
     ):
@@ -171,8 +178,10 @@ class PyTorchYolo(ObjectDetectorMixin, PyTorchEstimator):
         import torch
         import torchvision
 
-        torch_version = list(map(int, torch.__version__.lower().split("+", maxsplit=1)[0].split(".")))
-        torchvision_version = list(map(int, torchvision.__version__.lower().split("+", maxsplit=1)[0].split(".")))
+        torch_version = list(
+            map(int, torch.__version__.lower().split("+", maxsplit=1)[0].split(".")))
+        torchvision_version = list(
+            map(int, torchvision.__version__.lower().split("+", maxsplit=1)[0].split(".")))
         assert not (torch_version[0] == 1 and (torch_version[1] == 8 or torch_version[1] == 9)), (
             "PyTorchObjectDetector does not support torch==1.8 and torch==1.9 because of "
             "https://github.com/pytorch/vision/issues/4153. Support will return for torch==1.10."
@@ -198,12 +207,15 @@ class PyTorchYolo(ObjectDetectorMixin, PyTorchEstimator):
 
         if self.clip_values is not None:
             if self.clip_values[0] != 0:
-                raise ValueError("This estimator requires un-normalized input images with clip_vales=(0, max_value).")
+                raise ValueError(
+                    "This estimator requires un-normalized input images with clip_vales=(0, max_value).")
             if self.clip_values[1] <= 0:  # pragma: no cover
-                raise ValueError("This estimator requires un-normalized input images with clip_vales=(0, max_value).")
+                raise ValueError(
+                    "This estimator requires un-normalized input images with clip_vales=(0, max_value).")
 
         if self.postprocessing_defences is not None:
-            raise ValueError("This estimator does not support `postprocessing_defences`.")
+            raise ValueError(
+                "This estimator does not support `postprocessing_defences`.")
 
         self._model: torch.nn.Module
         self._model.to(self._device)
@@ -288,7 +300,8 @@ class PyTorchYolo(ObjectDetectorMixin, PyTorchEstimator):
                         "labels": torch.from_numpy(y_i["labels"]).type(torch.int64).to(self.device),
                     }
                     if "masks" in y_i:
-                        y_t["masks"] = torch.from_numpy(y_i["masks"]).type(torch.int64).to(self.device)
+                        y_t["masks"] = torch.from_numpy(
+                            y_i["masks"]).type(torch.int64).to(self.device)
                     y_tensor.append(y_t)
             elif y is not None and isinstance(y, dict):
                 y_tensor = []
@@ -313,11 +326,13 @@ class PyTorchYolo(ObjectDetectorMixin, PyTorchEstimator):
                     x_grad = torch.permute(x_grad, (2, 0, 1))
 
             image_tensor_list_grad = x_grad
-            x_preprocessed, y_preprocessed = self._apply_preprocessing(x_grad, y=y_tensor, fit=False, no_grad=False)
+            x_preprocessed, y_preprocessed = self._apply_preprocessing(
+                x_grad, y=y_tensor, fit=False, no_grad=False)
             inputs_t = x_preprocessed
 
         elif isinstance(x, np.ndarray):
-            x_preprocessed, y_preprocessed = self._apply_preprocessing(x, y=y, fit=False, no_grad=True)
+            x_preprocessed, y_preprocessed = self._apply_preprocessing(
+                x, y=y, fit=False, no_grad=True)
 
             if y_preprocessed is not None and isinstance(y_preprocessed[0]["boxes"], np.ndarray):
                 y_preprocessed_tensor = []
@@ -327,7 +342,8 @@ class PyTorchYolo(ObjectDetectorMixin, PyTorchEstimator):
                         "labels": torch.from_numpy(y_i["labels"]).type(torch.int64).to(self.device),
                     }
                     if "masks" in y_i:
-                        y_preprocessed_t["masks"] = torch.from_numpy(y_i["masks"]).type(torch.uint8).to(self.device)
+                        y_preprocessed_t["masks"] = torch.from_numpy(
+                            y_i["masks"]).type(torch.uint8).to(self.device)
                     y_preprocessed_tensor.append(y_preprocessed_t)
                 y_preprocessed = y_preprocessed_tensor
 
@@ -336,15 +352,18 @@ class PyTorchYolo(ObjectDetectorMixin, PyTorchEstimator):
             else:
                 norm_factor = 1.0
 
-            x_grad = torch.from_numpy(x_preprocessed / norm_factor).to(self.device)
+            x_grad = torch.from_numpy(
+                x_preprocessed / norm_factor).to(self.device)
             x_grad.requires_grad = True
             image_tensor_list_grad = x_grad
             inputs_t = image_tensor_list_grad
 
         else:
-            raise NotImplementedError("Combination of inputs and preprocessing not supported.")
+            raise NotImplementedError(
+                "Combination of inputs and preprocessing not supported.")
 
         labels_t = translate_labels_art_to_yolov3(labels_art=y_preprocessed)
+        labels_t = labels_t.to(self.device)
 
         loss_components = self._model(inputs_t, labels_t)
 
@@ -426,7 +445,8 @@ class PyTorchYolo(ObjectDetectorMixin, PyTorchEstimator):
         x_preprocessed, _ = self._apply_preprocessing(x, y=None, fit=False)
 
         # Convert samples into tensors
-        transform = torchvision.transforms.Compose([torchvision.transforms.ToTensor()])
+        transform = torchvision.transforms.Compose(
+            [torchvision.transforms.ToTensor()])
 
         if self.clip_values is not None:
             norm_factor = self.clip_values[1]
@@ -434,9 +454,11 @@ class PyTorchYolo(ObjectDetectorMixin, PyTorchEstimator):
             norm_factor = 1.0
 
         if self.channels_first:
-            x_preprocessed = torch.from_numpy(x_preprocessed / norm_factor).to(self.device)
+            x_preprocessed = torch.from_numpy(
+                x_preprocessed / norm_factor).to(self.device)
         else:
-            x_preprocessed = torch.stack([transform(x_i / norm_factor).to(self.device) for x_i in x_preprocessed])
+            x_preprocessed = torch.stack(
+                [transform(x_i / norm_factor).to(self.device) for x_i in x_preprocessed])
 
         predictions: List[Dict[str, np.ndarray]] = []
 
@@ -451,7 +473,7 @@ class PyTorchYolo(ObjectDetectorMixin, PyTorchEstimator):
         num_batch = int(np.ceil(len(x_preprocessed) / float(batch_size)))
         for m in range(num_batch):
             # Batch using indices
-            i_batch = x_preprocessed[m * batch_size : (m + 1) * batch_size]
+            i_batch = x_preprocessed[m * batch_size: (m + 1) * batch_size]
 
             with torch.no_grad():
                 predictions_xcycwh = self._model(i_batch)
@@ -463,11 +485,15 @@ class PyTorchYolo(ObjectDetectorMixin, PyTorchEstimator):
             for prediction_x1y1x2y2 in predictions_x1y1x2y2:
                 prediction = {}
 
-                prediction["boxes"] = prediction_x1y1x2y2["boxes"].detach().cpu().numpy()
-                prediction["labels"] = prediction_x1y1x2y2["labels"].detach().cpu().numpy()
-                prediction["scores"] = prediction_x1y1x2y2["scores"].detach().cpu().numpy()
+                prediction["boxes"] = prediction_x1y1x2y2["boxes"].detach(
+                ).cpu().numpy()
+                prediction["labels"] = prediction_x1y1x2y2["labels"].detach(
+                ).cpu().numpy()
+                prediction["scores"] = prediction_x1y1x2y2["scores"].detach(
+                ).cpu().numpy()
                 if "masks" in prediction_x1y1x2y2:
-                    prediction["masks"] = prediction_x1y1x2y2["masks"].detach().cpu().numpy().squeeze()
+                    prediction["masks"] = prediction_x1y1x2y2["masks"].detach(
+                    ).cpu().numpy().squeeze()
 
                 predictions.append(prediction)
 
@@ -510,13 +536,16 @@ class PyTorchYolo(ObjectDetectorMixin, PyTorchEstimator):
         self._model.train()
 
         if self._optimizer is None:  # pragma: no cover
-            raise ValueError("An optimizer is needed to train the model, but none for provided.")
+            raise ValueError(
+                "An optimizer is needed to train the model, but none for provided.")
 
         # Apply preprocessing
-        x_preprocessed, y_preprocessed = self._apply_preprocessing(x, y=y, fit=False, no_grad=True)
+        x_preprocessed, y_preprocessed = self._apply_preprocessing(
+            x, y=y, fit=False, no_grad=True)
 
         # Convert samples into tensors
-        transform = torchvision.transforms.Compose([torchvision.transforms.ToTensor()])
+        transform = torchvision.transforms.Compose(
+            [torchvision.transforms.ToTensor()])
 
         if self.clip_values is not None:
             norm_factor = self.clip_values[1]
@@ -524,9 +553,11 @@ class PyTorchYolo(ObjectDetectorMixin, PyTorchEstimator):
             norm_factor = 1.0
 
         if self.channels_first:
-            x_preprocessed = torch.from_numpy(x_preprocessed / norm_factor).to(self.device)
+            x_preprocessed = torch.from_numpy(
+                x_preprocessed / norm_factor).to(self.device)
         else:
-            x_preprocessed = torch.stack([transform(x_i / norm_factor).to(self.device) for x_i in x_preprocessed])
+            x_preprocessed = torch.stack(
+                [transform(x_i / norm_factor).to(self.device) for x_i in x_preprocessed])
 
         # Convert labels into tensors, if needed
         if isinstance(y_preprocessed[0]["boxes"], np.ndarray):
@@ -537,7 +568,8 @@ class PyTorchYolo(ObjectDetectorMixin, PyTorchEstimator):
                     "labels": torch.from_numpy(y_i["labels"]).type(torch.int64).to(self.device),
                 }
                 if "masks" in y_i:
-                    y_preprocessed_t["masks"] = torch.from_numpy(y_i["masks"]).type(torch.uint8).to(self.device)
+                    y_preprocessed_t["masks"] = torch.from_numpy(
+                        y_i["masks"]).type(torch.uint8).to(self.device)
                 y_preprocessed_tensor.append(y_preprocessed_t)
             y_preprocessed = y_preprocessed_tensor
         y_preprocessed = np.asarray(y_preprocessed)
@@ -556,8 +588,10 @@ class PyTorchYolo(ObjectDetectorMixin, PyTorchEstimator):
 
             # Train for one epoch
             for m in range(num_batch):
-                i_batch = x_preprocessed[ind[m * batch_size : (m + 1) * batch_size]]
-                o_batch = y_preprocessed[ind[m * batch_size : (m + 1) * batch_size]]
+                i_batch = x_preprocessed[ind[m *
+                                             batch_size: (m + 1) * batch_size]]
+                o_batch = y_preprocessed[ind[m *
+                                             batch_size: (m + 1) * batch_size]]
 
                 # Zero the parameter gradients
                 self._optimizer.zero_grad()
